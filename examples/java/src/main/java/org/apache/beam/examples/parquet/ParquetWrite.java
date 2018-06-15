@@ -25,7 +25,6 @@ import org.apache.beam.sdk.coders.AvroCoder;
 import org.apache.beam.sdk.io.FileIO;
 import org.apache.beam.sdk.io.GenerateSequence;
 import org.apache.beam.sdk.io.parquet.ParquetIO;
-import org.apache.beam.sdk.options.PipelineOptions;
 import org.apache.beam.sdk.options.PipelineOptionsFactory;
 import org.apache.beam.sdk.transforms.DoFn;
 import org.apache.beam.sdk.transforms.ParDo;
@@ -45,25 +44,24 @@ public class ParquetWrite {
     + "}");
 
   public static void main(String[] args) {
-    PipelineOptions options = PipelineOptionsFactory.fromArgs(args).create();
+    PipelineOptionsFactory.register(ParquetExamplePipelineOptions.class);
+    ParquetExamplePipelineOptions options = PipelineOptionsFactory
+      .fromArgs(args)
+      .as(ParquetExamplePipelineOptions.class);
     Pipeline pipeline = Pipeline.create(options);
 
-    long numberOfRecords = 1000;
-    String filenamePrefix = "/Users/lukasz/Projects/apache-beam/parquet-demo/PREFIX";
-
-    pipeline.apply("Generate sequence", GenerateSequence.from(0).to(numberOfRecords))
+    pipeline.apply("Generate sequence", GenerateSequence.from(0).to(options.getNumberOfRecords()))
       .apply("Produce text lines", ParDo.of(new DeterministicallyConstructTestTextLineFn()))
       .apply("Produce Avro records", ParDo.of(new DeterministicallyConstructAvroRecordsFn()))
       .setCoder(AvroCoder.of(SCHEMA))
       .apply("Write Parquet files", FileIO.<GenericRecord>write()
         .via(ParquetIO.sink(SCHEMA))
-        .to(filenamePrefix));
+        .to(options.getFilenamePrefix()));
 
     pipeline.run().waitUntilFinish();
   }
 
   private static class DeterministicallyConstructTestTextLineFn extends DoFn<Long, String> {
-
     @ProcessElement public void processElement(ProcessContext c) {
       c.output(String.format("IO IT Test line of text. Line seed: %s", c.element()));
     }
