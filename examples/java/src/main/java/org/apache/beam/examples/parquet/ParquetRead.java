@@ -36,9 +36,9 @@ import org.apache.beam.sdk.transforms.SerializableFunction;
 public class ParquetRead {
 
   private static final Schema SCHEMA = new Schema.Parser().parse("{\n"
-    + " \"namespace\": \"ioitavro\",\n"
+    + " \"namespace\": \"ioitParquet\",\n"
     + " \"type\": \"record\",\n"
-    + " \"name\": \"TestAvroLine\",\n"
+    + " \"name\": \"TestParquetLine\",\n"
     + " \"fields\": [\n"
     + "     {\"name\": \"row\", \"type\": \"string\"}\n"
     + " ]\n"

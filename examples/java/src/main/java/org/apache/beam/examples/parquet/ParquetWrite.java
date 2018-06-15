@@ -35,9 +35,9 @@ import org.apache.beam.sdk.transforms.ParDo;
 public class ParquetWrite {
 
   private static final Schema SCHEMA = new Schema.Parser().parse("{\n"
-    + " \"namespace\": \"ioitavro\",\n"
+    + " \"namespace\": \"ioitparquet\",\n"
     + " \"type\": \"record\",\n"
-    + " \"name\": \"TestAvroLine\",\n"
+    + " \"name\": \"TestParquetLine\",\n"
     + " \"fields\": [\n"
     + "     {\"name\": \"row\", \"type\": \"string\"}\n"
     + " ]\n"
