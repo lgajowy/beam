@@ -240,7 +240,7 @@ task directRunnerIT(dependsOn: 'installGcpTest') {
 //  b) Otherwise, start a local JobService, for example, the Portable Flink runner
 //    (in a separate shell since it continues to run):
 //
-//    ./gradlew :beam-runners-flink_2.11-job-server:runShadow
+//    ./gradlew :beam-runners-flink_2.11-job-server:runShadow -PflinkMasterUrl=localhost:8081
 //
 // Then you can run this example:
 //
@@ -256,9 +256,9 @@ task portableWordCount(dependsOn: 'installGcpTest') {
   doLast {
     // TODO: Figure out GCS credentials and use real GCS input and output.
     def options = [
-            "--input=/etc/profile",
-            "--output=/tmp/py-wordcount-direct",
-            "--runner=PortableRunner",
+            "--input=/Users/lukasz/Projects/apache-beam/wordcount/kinglear.txt",
+            "--output=/Users/lukasz/Projects/apache-beam/wordcount/demo-2/wc.txt",
+            "--runner=PortableRunner"
     ]
     if (project.hasProperty("streaming"))
       options += ["--streaming"]
