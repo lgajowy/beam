@@ -49,6 +49,13 @@ dependencies {
   shadow project(path: ":beam-sdks-java-core", configuration: "shadow")
   shadow project(path: ":beam-sdks-java-extensions-google-cloud-platform-core", configuration: "shadow")
   shadow project(path: ":beam-sdks-java-io-google-cloud-platform", configuration: "shadow")
+
+  shadow project(path: ":beam-runners-flink_2.11", configuration: "shadow")
+  shadow project(path: ":beam-runners-spark", configuration: "shadow")
+  shadow project.library.java.spark_core
+  shadow project.library.java.spark_streaming
+
+
   shadow library.java.google_api_client
   shadow library.java.google_api_services_bigquery
   shadow library.java.google_http_client
@@ -126,4 +133,16 @@ task preCommit() {
   dependsOn ":beam-runners-google-cloud-dataflow-java-examples:preCommit"
   dependsOn ":beam-runners-google-cloud-dataflow-java-examples-streaming:preCommit"
 }
+
+project.configurations.runtimeClasspath {
+  exclude group: "org.slf4j", module: "slf4j-jdk14"
+}
+
+apply plugin: 'application'
+
+def mainClassProperty = "mainClass"
+def mainClass = project.findProperty(mainClassProperty)
+mainClassName = mainClass
+
+
 
