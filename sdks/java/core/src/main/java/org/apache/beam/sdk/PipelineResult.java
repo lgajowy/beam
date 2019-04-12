@@ -18,6 +18,8 @@
 package org.apache.beam.sdk;
 
 import java.io.IOException;
+import java.util.List;
+import org.apache.beam.model.pipeline.v1.MetricsApi;
 import org.apache.beam.sdk.annotations.Experimental;
 import org.apache.beam.sdk.annotations.Experimental.Kind;
 import org.apache.beam.sdk.metrics.MetricResults;

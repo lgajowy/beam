@@ -17,11 +17,13 @@
  */
 package org.apache.beam.runners.fnexecution.jobsubmission;
 
+import java.util.List;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 import java.util.function.Consumer;
 import java.util.function.Function;
+import org.apache.beam.model.jobmanagement.v1.JobApi;
 import org.apache.beam.model.jobmanagement.v1.JobApi.CancelJobRequest;
 import org.apache.beam.model.jobmanagement.v1.JobApi.CancelJobResponse;
 import org.apache.beam.model.jobmanagement.v1.JobApi.DescribePipelineOptionsRequest;
@@ -38,6 +40,7 @@ import org.apache.beam.model.jobmanagement.v1.JobApi.RunJobRequest;
 import org.apache.beam.model.jobmanagement.v1.JobApi.RunJobResponse;
 import org.apache.beam.model.jobmanagement.v1.JobServiceGrpc;
 import org.apache.beam.model.pipeline.v1.Endpoints;
+import org.apache.beam.model.pipeline.v1.MetricsApi;
 import org.apache.beam.runners.core.construction.graph.PipelineValidator;
 import org.apache.beam.runners.fnexecution.FnService;
 import org.apache.beam.sdk.fn.stream.SynchronizedStreamObserver;
@@ -274,6 +277,28 @@ public class InMemoryJobService extends JobServiceGrpc.JobServiceImplBase implem
       LOG.error(errMessage, e);
       responseObserver.onError(Status.INTERNAL.withCause(e).asException());
     }
+  }
+
+  @Override
+  public void getJobMetrics(JobApi.GetJobMetricsRequest request,
+      StreamObserver<JobApi.GetJobMetricsResponse> responseObserver) {
+
+    try {
+      JobInvocation invocation = getInvocation(request.getJobId());
+
+      List<MetricsApi.MonitoringInfo> monitoringInfos = invocation.getMonitoringInfos();
+
+      // TODO(lgajowy): I know it should be more sophisticated logic here.
+      //  Here I'm just trying to send a MonitoringInfo, nothing else.
+      responseObserver.onNext(JobApi.GetJobMetricsResponse
+          .newBuilder()
+          .setAttempted(1, monitoringInfos.get(0))
+          .build());
+
+    } catch (StatusException e) {
+      throw new RuntimeException(e);
+    }
+
   }
 
   @Override

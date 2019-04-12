@@ -15,7 +15,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.beam.runners.reference;
+package org.apache.beam.runners.fnexecution.jobsubmission;
 
 import static org.apache.beam.vendor.guava.v20_0.com.google.common.base.Preconditions.checkArgument;
 import static org.apache.beam.vendor.guava.v20_0.com.google.common.base.Preconditions.checkState;
@@ -65,7 +65,7 @@ public class CloseableResource<T> implements AutoCloseable {
   /** Gets the underlying resource. */
   public T get() {
     checkState(closer != null, "%s has transferred ownership", CloseableResource.class.getName());
-    checkState(!isClosed, "% is closed", CloseableResource.class.getName());
+    checkState(!isClosed, "%s is closed", resource.getClass().getName());
     return resource;
   }
 

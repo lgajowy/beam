@@ -15,8 +15,11 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.beam.runners.reference;
+package org.apache.beam.runners.fnexecution.jobsubmission;
 
+import static java.lang.String.*;
+
+import java.util.List;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
@@ -28,6 +31,7 @@ import org.apache.beam.model.jobmanagement.v1.JobApi.CancelJobResponse;
 import org.apache.beam.model.jobmanagement.v1.JobApi.GetJobStateRequest;
 import org.apache.beam.model.jobmanagement.v1.JobApi.GetJobStateResponse;
 import org.apache.beam.model.jobmanagement.v1.JobServiceGrpc.JobServiceBlockingStub;
+import org.apache.beam.model.pipeline.v1.MetricsApi;
 import org.apache.beam.sdk.PipelineResult;
 import org.apache.beam.sdk.metrics.MetricResults;
 import org.apache.beam.vendor.grpc.v1p13p1.com.google.protobuf.ByteString;
@@ -35,7 +39,7 @@ import org.joda.time.Duration;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-class JobServicePipelineResult implements PipelineResult, AutoCloseable {
+public class JobServicePipelineResult implements PipelineResult, AutoCloseable {
 
   private static final long POLL_INTERVAL_MS = 10 * 1000;
 
@@ -46,8 +50,8 @@ class JobServicePipelineResult implements PipelineResult, AutoCloseable {
   @Nullable private State terminationState;
   @Nullable private Runnable cleanup;
 
-  JobServicePipelineResult(
-      ByteString jobId, CloseableResource<JobServiceBlockingStub> jobService, Runnable cleanup) {
+  public JobServicePipelineResult(ByteString jobId,
+      CloseableResource<JobServiceBlockingStub> jobService, Runnable cleanup) {
     this.jobId = jobId;
     this.jobService = jobService;
     this.terminationState = null;
@@ -121,12 +125,29 @@ class JobServicePipelineResult implements PipelineResult, AutoCloseable {
 
   @Override
   public MetricResults metrics() {
-    throw new UnsupportedOperationException("Not yet implemented.");
+
+    // TODO: If we make this approach work (without class cast exceptions)
+    //  we'll be able to convert MonitoringInfos to MetricResults easily here (only once, only here)
+    List<MetricsApi.MonitoringInfo> monitoringInfos = portableMetrics();
+
+    return null;
+  }
+
+  List<MetricsApi.MonitoringInfo> portableMetrics() {
+    JobApi.GetJobMetricsResponse response = jobService.get()
+        .getJobMetrics(JobApi.GetJobMetricsRequest.newBuilder().setJobIdBytes(jobId).build());
+
+    return response.getAttemptedList();
   }
 
   @Override
   public void close() {
+    LOG.info(format("Closing %s", this.getClass().getName()));
+
     try (CloseableResource<JobServiceBlockingStub> jobService = this.jobService) {
+      metrics();
+      LOG.info("Got metrics during cleanup");
+
       if (cleanup != null) {
         cleanup.run();
       }

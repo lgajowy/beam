@@ -21,7 +21,6 @@ import static org.apache.beam.vendor.guava.v20_0.com.google.common.base.Precondi
 import static org.apache.beam.vendor.guava.v20_0.com.google.common.base.Throwables.getRootCause;
 import static org.apache.beam.vendor.guava.v20_0.com.google.common.base.Throwables.getStackTraceAsString;
 
-import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.function.Consumer;
@@ -29,10 +28,10 @@ import javax.annotation.Nullable;
 import org.apache.beam.model.jobmanagement.v1.JobApi.JobMessage;
 import org.apache.beam.model.jobmanagement.v1.JobApi.JobState;
 import org.apache.beam.model.jobmanagement.v1.JobApi.JobState.Enum;
+import org.apache.beam.model.pipeline.v1.MetricsApi;
 import org.apache.beam.model.pipeline.v1.RunnerApi;
 import org.apache.beam.model.pipeline.v1.RunnerApi.Pipeline;
 import org.apache.beam.runners.fnexecution.provisioning.JobInfo;
-import org.apache.beam.sdk.PipelineResult;
 import org.apache.beam.vendor.guava.v20_0.com.google.common.util.concurrent.FutureCallback;
 import org.apache.beam.vendor.guava.v20_0.com.google.common.util.concurrent.Futures;
 import org.apache.beam.vendor.guava.v20_0.com.google.common.util.concurrent.ListenableFuture;
@@ -52,7 +51,9 @@ public class JobInvocation {
   private List<Consumer<Enum>> stateObservers;
   private List<Consumer<JobMessage>> messageObservers;
   private JobState.Enum jobState;
-  @Nullable private ListenableFuture<PipelineResult> invocationFuture;
+  @Nullable private ListenableFuture<JobServicePipelineResult> invocationFuture;
+
+  private List<MetricsApi.MonitoringInfo> monitoringInfos = new ArrayList<>();
 
   public JobInvocation(
       JobInfo jobInfo,
@@ -69,8 +70,10 @@ public class JobInvocation {
     this.jobState = JobState.Enum.STOPPED;
   }
 
-  private PipelineResult runPipeline() throws Exception {
-    return pipelineRunner.run(pipeline, jobInfo);
+  // TODO(lgajowy): This will cause ClassCastException due to the fact that in runtime this method
+  //  returns Flink/Samza/Spark/RunnerResult
+  private JobServicePipelineResult runPipeline() throws Exception {
+    return (JobServicePipelineResult) pipelineRunner.run(pipeline, jobInfo);
   }
 
   /** Start the job. */
@@ -80,17 +83,22 @@ public class JobInvocation {
       throw new IllegalStateException(String.format("Job %s already running.", getId()));
     }
     setState(JobState.Enum.STARTING);
+
+    // TODO(lgajowy): If I don't do the cast in line 77, this line won't compile.
     invocationFuture = executorService.submit(this::runPipeline);
     // TODO: Defer transitioning until the pipeline is up and running.
     setState(JobState.Enum.RUNNING);
     Futures.addCallback(
         invocationFuture,
-        new FutureCallback<PipelineResult>() {
+        new FutureCallback<JobServicePipelineResult>() {
           @Override
-          public void onSuccess(@Nullable PipelineResult pipelineResult) {
+          public void onSuccess(@Nullable JobServicePipelineResult pipelineResult) {
             if (pipelineResult != null) {
+
+              monitoringInfos = pipelineResult.portableMetrics();
+
               checkArgument(
-                  pipelineResult.getState() == PipelineResult.State.DONE,
+                  pipelineResult.getState() == JobServicePipelineResult.State.DONE,
                   "Success on non-Done state: " + pipelineResult.getState());
               setState(JobState.Enum.DONE);
             } else {
@@ -118,6 +126,10 @@ public class JobInvocation {
         executorService);
   }
 
+  public List<MetricsApi.MonitoringInfo> getMonitoringInfos() {
+    return monitoringInfos;
+  }
+
   /** @return Unique identifier for the job invocation. */
   public String getId() {
     return jobInfo.jobId();
@@ -130,15 +142,11 @@ public class JobInvocation {
       this.invocationFuture.cancel(true /* mayInterruptIfRunning */);
       Futures.addCallback(
           invocationFuture,
-          new FutureCallback<PipelineResult>() {
+          new FutureCallback<JobServicePipelineResult>() {
             @Override
-            public void onSuccess(@Nullable PipelineResult pipelineResult) {
+            public void onSuccess(@Nullable JobServicePipelineResult pipelineResult) {
               if (pipelineResult != null) {
-                try {
-                  pipelineResult.cancel();
-                } catch (IOException exn) {
-                  throw new RuntimeException(exn);
-                }
+                pipelineResult.cancel();
               }
             }
 
