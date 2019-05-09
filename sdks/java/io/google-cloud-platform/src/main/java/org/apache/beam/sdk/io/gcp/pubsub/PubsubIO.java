@@ -20,6 +20,7 @@ package org.apache.beam.sdk.io.gcp.pubsub;
 import static org.apache.beam.vendor.guava.v20_0.com.google.common.base.Preconditions.checkState;
 
 import com.google.api.client.util.Clock;
+import com.google.auto.service.AutoService;
 import com.google.auto.value.AutoValue;
 import com.google.protobuf.Message;
 import java.io.IOException;
@@ -38,9 +39,11 @@ import org.apache.beam.sdk.PipelineRunner;
 import org.apache.beam.sdk.annotations.Experimental;
 import org.apache.beam.sdk.annotations.Experimental.Kind;
 import org.apache.beam.sdk.coders.AvroCoder;
+import org.apache.beam.sdk.coders.ByteArrayCoder;
 import org.apache.beam.sdk.coders.Coder;
 import org.apache.beam.sdk.coders.CoderException;
 import org.apache.beam.sdk.coders.StringUtf8Coder;
+import org.apache.beam.sdk.expansion.ExternalTransformRegistrar;
 import org.apache.beam.sdk.extensions.protobuf.ProtoCoder;
 import org.apache.beam.sdk.io.gcp.pubsub.PubsubClient.OutgoingMessage;
 import org.apache.beam.sdk.io.gcp.pubsub.PubsubClient.ProjectPath;
@@ -52,6 +55,7 @@ import org.apache.beam.sdk.options.ValueProvider.StaticValueProvider;
 import org.apache.beam.sdk.schemas.Schema;
 import org.apache.beam.sdk.schemas.utils.AvroUtils;
 import org.apache.beam.sdk.transforms.DoFn;
+import org.apache.beam.sdk.transforms.ExternalTransformBuilder;
 import org.apache.beam.sdk.transforms.MapElements;
 import org.apache.beam.sdk.transforms.PTransform;
 import org.apache.beam.sdk.transforms.ParDo;
@@ -64,6 +68,7 @@ import org.apache.beam.sdk.values.PBegin;
 import org.apache.beam.sdk.values.PCollection;
 import org.apache.beam.sdk.values.PDone;
 import org.apache.beam.sdk.values.Row;
+import org.apache.beam.vendor.guava.v20_0.com.google.common.base.Charsets;
 import org.apache.beam.vendor.guava.v20_0.com.google.common.annotations.VisibleForTesting;
 import org.apache.beam.vendor.guava.v20_0.com.google.common.base.MoreObjects;
 import org.apache.beam.vendor.guava.v20_0.com.google.common.collect.ImmutableMap;
@@ -646,7 +651,7 @@ public class PubsubIO {
     abstract Builder<T> toBuilder();
 
     @AutoValue.Builder
-    abstract static class Builder<T> {
+    abstract static class Builder<T> implements ExternalTransformBuilder<External.Configuration, PBegin, PCollection<T>> {
       abstract Builder<T> setTopicProvider(ValueProvider<PubsubTopic> topic);
 
       abstract Builder<T> setSubscriptionProvider(ValueProvider<PubsubSubscription> subscription);
@@ -672,6 +677,42 @@ public class PubsubIO {
       abstract Builder<T> setClock(@Nullable Clock clock);
 
       abstract Read<T> build();
+
+      @Override
+      public PTransform<PBegin, PCollection<T>> buildExternal(External.Configuration configuration) {
+        String subscriptionPath = configuration.subscription;
+        NestedValueProvider<PubsubSubscription, String> subscription = NestedValueProvider
+            .of(StaticValueProvider.of(subscriptionPath), new SubscriptionTranslator());
+
+        setSubscriptionProvider(subscription);
+        setNeedsAttributes(false);
+        setPubsubClientFactory(FACTORY);
+
+        Coder coder = PubsubMessagePayloadOnlyCoder.of();
+        setCoder((Coder<T>) coder);
+        setParseFn((SimpleFunction<PubsubMessage, T>) new ParsePayloadUsingCoder<>(coder));
+
+        return build();
+      }
+    }
+    @AutoService(ExternalTransformRegistrar.class)
+    public static class External implements ExternalTransformRegistrar {
+
+      public static final String URN = "beam:external:java:pubsub:read:v1";
+
+      @Override
+      public Map<String, Class<? extends ExternalTransformBuilder>> knownBuilders() {
+        return ImmutableMap.of(URN, AutoValue_PubsubIO_Read.Builder.class);
+      }
+
+      /** Parameters class to expose the transform to an external SDK. */
+      public static class Configuration {
+        private String subscription;
+
+        public void setSubscription(String subscription) {
+          this.subscription = subscription;
+        }
+      }
     }
 
     /**

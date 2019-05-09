@@ -86,6 +86,7 @@ dependencies {
 //  TODO: Enable AWS and HDFS file system.
   // For resolving external transform requests
   compile project(path: ":beam-sdks-java-io-kafka", configuration: "shadow")
+  compile project(path: ":beam-sdks-java-io-google-cloud-platform", configuration: "shadow")
 }
 
 // NOTE: runShadow must be used in order to run the job server. The standard run
