@@ -188,7 +188,7 @@ message GetJobMetricsRequest {
 }
 
 message GetJobMetricsResponse {
-  MetricResults metrics = 1;
+  repeated org.apache.beam.model.pipeline.v1.MonitoringInfo metrics = 1;
 }
 
 // All metrics for a given job.  Runners may support one or the other or both.

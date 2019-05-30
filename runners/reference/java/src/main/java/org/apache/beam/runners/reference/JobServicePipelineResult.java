@@ -17,6 +17,7 @@
  */
 package org.apache.beam.runners.reference;
 
+import java.util.List;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
@@ -25,9 +26,12 @@ import javax.annotation.Nullable;
 import org.apache.beam.model.jobmanagement.v1.JobApi;
 import org.apache.beam.model.jobmanagement.v1.JobApi.CancelJobRequest;
 import org.apache.beam.model.jobmanagement.v1.JobApi.CancelJobResponse;
+import org.apache.beam.model.jobmanagement.v1.JobApi.GetJobMetricsRequest;
+import org.apache.beam.model.jobmanagement.v1.JobApi.GetJobMetricsResponse;
 import org.apache.beam.model.jobmanagement.v1.JobApi.GetJobStateRequest;
 import org.apache.beam.model.jobmanagement.v1.JobApi.GetJobStateResponse;
 import org.apache.beam.model.jobmanagement.v1.JobServiceGrpc.JobServiceBlockingStub;
+import org.apache.beam.model.pipeline.v1.MetricsApi;
 import org.apache.beam.sdk.PipelineResult;
 import org.apache.beam.sdk.metrics.MetricResults;
 import org.apache.beam.vendor.grpc.v1p13p1.com.google.protobuf.ByteString;
@@ -45,6 +49,7 @@ class JobServicePipelineResult implements PipelineResult, AutoCloseable {
   private final CloseableResource<JobServiceBlockingStub> jobService;
   @Nullable private State terminationState;
   @Nullable private final Runnable cleanup;
+  @Nullable private MetricResults metricResults;
 
   JobServicePipelineResult(
       ByteString jobId, CloseableResource<JobServiceBlockingStub> jobService, Runnable cleanup) {
@@ -121,12 +126,34 @@ class JobServicePipelineResult implements PipelineResult, AutoCloseable {
 
   @Override
   public MetricResults metrics() {
-    throw new UnsupportedOperationException("Not yet implemented.");
+    if(metricResults != null) {
+      return metricResults;
+    }
+
+    LOG.info("Fetching MetricResults");
+    GetJobMetricsResponse response =
+        jobService
+            .get()
+            .getJobMetrics(GetJobMetricsRequest.newBuilder().setJobIdBytes(jobId).build());
+
+    List<MetricsApi.MonitoringInfo> metricsList = response.getMetricsList();
+
+    LOG.info("PRINTING METRICS");
+    System.out.println("PRINTING METRICS:");
+    for (MetricsApi.MonitoringInfo monitoringInfo : metricsList) {
+      LOG.info(monitoringInfo.toString());
+      System.out.println(monitoringInfo.toString());
+    }
+
+    LOG.info("Received MetricResults: {}", metricResults);
+    throw new UnsupportedOperationException("Conversion is not yet implemented but we get the MIs!");
   }
 
   @Override
   public void close() {
     try (CloseableResource<JobServiceBlockingStub> jobService = this.jobService) {
+      metrics();
+      LOG.info("Got metrics during cleanup");
       if (cleanup != null) {
         cleanup.run();
       }

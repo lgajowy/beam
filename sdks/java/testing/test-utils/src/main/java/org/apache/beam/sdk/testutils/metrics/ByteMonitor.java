@@ -39,7 +39,10 @@ public class ByteMonitor<T> extends DoFn<T, T> {
 
   @ProcessElement
   public void processElement(ProcessContext c) {
-    totalBytes.inc(ObjectSizeCalculator.getObjectSize(c.element()));
+
+
+    //totalBytes.inc(ObjectSizeCalculator.getObjectSize(c.element()));
+    totalBytes.inc();
     c.output(c.element());
   }
 }

@@ -23,5 +23,5 @@ import org.apache.beam.sdk.PipelineResult;
 
 /** Runs a portable Beam pipeline on some execution engine. */
 public interface PortablePipelineRunner {
-  PipelineResult run(RunnerApi.Pipeline pipeline, JobInfo jobInfo) throws Exception;
+  PortablePipelineResult run(RunnerApi.Pipeline pipeline, JobInfo jobInfo) throws Exception;
 }

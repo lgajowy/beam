@@ -26,6 +26,7 @@ import org.apache.beam.model.pipeline.v1.RunnerApi.Pipeline;
 import org.apache.beam.runners.core.construction.graph.ExecutableStage;
 import org.apache.beam.runners.core.construction.graph.GreedyPipelineFuser;
 import org.apache.beam.runners.core.construction.graph.PipelineTrimmer;
+import org.apache.beam.runners.fnexecution.jobsubmission.PortablePipelineResult;
 import org.apache.beam.runners.fnexecution.jobsubmission.PortablePipelineRunner;
 import org.apache.beam.runners.fnexecution.provisioning.JobInfo;
 import org.apache.beam.sdk.PipelineResult;
@@ -50,7 +51,7 @@ public class FlinkPipelineRunner implements PortablePipelineRunner {
   }
 
   @Override
-  public PipelineResult run(final Pipeline pipeline, JobInfo jobInfo) throws Exception {
+  public PortablePipelineResult run(final Pipeline pipeline, JobInfo jobInfo) throws Exception {
     MetricsEnvironment.setMetricsSupported(false);
 
     FlinkPortablePipelineTranslator<?> translator;
@@ -64,7 +65,7 @@ public class FlinkPipelineRunner implements PortablePipelineRunner {
   }
 
   private <T extends FlinkPortablePipelineTranslator.TranslationContext>
-      PipelineResult runPipelineWithTranslator(
+  PortablePipelineResult runPipelineWithTranslator(
           final Pipeline pipeline, JobInfo jobInfo, FlinkPortablePipelineTranslator<T> translator)
           throws Exception {
     LOG.info("Translating pipeline to Flink program.");
@@ -85,7 +86,8 @@ public class FlinkPipelineRunner implements PortablePipelineRunner {
             translator.createTranslationContext(jobInfo, pipelineOptions, confDir, filesToStage),
             fusedPipeline);
     final JobExecutionResult result = executor.execute(pipelineOptions.getJobName());
+    PipelineResult pipelineResult = FlinkRunner.createPipelineResult(result, pipelineOptions);
 
-    return FlinkRunner.createPipelineResult(result, pipelineOptions);
+    return new FlinkPortablePipelineResult(pipelineResult);
   }
 }

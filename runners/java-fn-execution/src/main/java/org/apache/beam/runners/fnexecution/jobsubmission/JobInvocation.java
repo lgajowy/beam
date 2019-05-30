@@ -23,12 +23,14 @@ import static org.apache.beam.vendor.guava.v20_0.com.google.common.base.Throwabl
 
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.List;
 import java.util.function.Consumer;
 import javax.annotation.Nullable;
 import org.apache.beam.model.jobmanagement.v1.JobApi.JobMessage;
 import org.apache.beam.model.jobmanagement.v1.JobApi.JobState;
 import org.apache.beam.model.jobmanagement.v1.JobApi.JobState.Enum;
+import org.apache.beam.model.pipeline.v1.MetricsApi;
 import org.apache.beam.model.pipeline.v1.RunnerApi;
 import org.apache.beam.model.pipeline.v1.RunnerApi.Pipeline;
 import org.apache.beam.runners.fnexecution.provisioning.JobInfo;
@@ -52,7 +54,8 @@ public class JobInvocation {
   private List<Consumer<Enum>> stateObservers;
   private List<Consumer<JobMessage>> messageObservers;
   private JobState.Enum jobState;
-  @Nullable private ListenableFuture<PipelineResult> invocationFuture;
+  private Collection<MetricsApi.MonitoringInfo> metrics;
+  @Nullable private ListenableFuture<PortablePipelineResult> invocationFuture;
 
   public JobInvocation(
       JobInfo jobInfo,
@@ -69,7 +72,7 @@ public class JobInvocation {
     this.jobState = JobState.Enum.STOPPED;
   }
 
-  private PipelineResult runPipeline() throws Exception {
+  private PortablePipelineResult runPipeline() throws Exception {
     return pipelineRunner.run(pipeline, jobInfo);
   }
 
@@ -85,13 +88,15 @@ public class JobInvocation {
     setState(JobState.Enum.RUNNING);
     Futures.addCallback(
         invocationFuture,
-        new FutureCallback<PipelineResult>() {
+        new FutureCallback<PortablePipelineResult>() {
           @Override
-          public void onSuccess(@Nullable PipelineResult pipelineResult) {
+          public void onSuccess(@Nullable PortablePipelineResult pipelineResult) {
             if (pipelineResult != null) {
               checkArgument(
                   pipelineResult.getState() == PipelineResult.State.DONE,
                   "Success on non-Done state: " + pipelineResult.getState());
+
+              metrics = pipelineResult.portableMetrics();
               setState(JobState.Enum.DONE);
             } else {
               setState(JobState.Enum.UNSPECIFIED);
@@ -130,12 +135,14 @@ public class JobInvocation {
       this.invocationFuture.cancel(true /* mayInterruptIfRunning */);
       Futures.addCallback(
           invocationFuture,
-          new FutureCallback<PipelineResult>() {
+          new FutureCallback<PortablePipelineResult>() {
             @Override
-            public void onSuccess(@Nullable PipelineResult pipelineResult) {
+            public void onSuccess(@Nullable PortablePipelineResult pipelineResult) {
               if (pipelineResult != null) {
                 try {
+                  metrics = pipelineResult.portableMetrics();
                   pipelineResult.cancel();
+
                 } catch (IOException exn) {
                   throw new RuntimeException(exn);
                 }
@@ -152,6 +159,10 @@ public class JobInvocation {
   /** Retrieve the job's current state. */
   public JobState.Enum getState() {
     return this.jobState;
+  }
+
+  public Collection<MetricsApi.MonitoringInfo> getMetrics() {
+    return metrics;
   }
 
   /** Listen for job state changes with a {@link Consumer}. */

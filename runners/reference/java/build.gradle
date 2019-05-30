@@ -35,6 +35,8 @@ dependencies {
   shadow project(path: ":sdks:java:harness", configuration: "shadow")
   shadow library.java.vendored_grpc_1_13_1
   shadow library.java.slf4j_api
+  shadow library.java.slf4j_simple
+
   shadowTest project(path: ":runners:core-construction-java", configuration: "shadowTest")
   shadowTest library.java.hamcrest_core
   shadowTest library.java.junit
