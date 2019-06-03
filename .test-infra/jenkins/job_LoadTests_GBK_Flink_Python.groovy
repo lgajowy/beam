@@ -28,6 +28,10 @@ String dockerRegistryRoot = 'gcr.io/apache-beam-testing/beam_portability'
 String dockerTag = 'latest'
 String jobServerImageTag = "${dockerRegistryRoot}/flink-job-server:${dockerTag}"
 String pythonHarnessImageTag = "${dockerRegistryRoot}/python:${dockerTag}"
+
+String flinkVersion = '1.7'
+String flinkDownloadUrl = 'https://archive.apache.org/dist/flink/flink-1.7.0/flink-1.7.0-bin-hadoop28-scala_2.11.tgz'
+
 int numWorkers = 3
 
 def testConfiguration =
@@ -58,8 +62,8 @@ def loadTest = { scope, triggeringContext ->
   commonJobProperties.setTopLevelMainJobProperties(scope, 'master', 240)
 
   infra.prepareSDKHarness(scope, testConfiguration.sdk, dockerRegistryRoot, 'latest')
-  infra.prepareFlinkJobServer(scope, dockerRegistryRoot, 'latest')
-  infra.setupFlinkCluster(scope, jenkinsJobName, numWorkers, pythonHarnessImageTag, jobServerImageTag)
+  infra.prepareFlinkJobServer(scope, flinkVersion, dockerRegistryRoot, 'latest')
+  infra.setupFlinkCluster(scope, jenkinsJobName, flinkDownloadUrl, numWorkers, pythonHarnessImageTag, jobServerImageTag)
 
   loadTestsBuilder.loadTest(scope, testConfiguration.title, testConfiguration.runner, testConfiguration.sdk, testConfiguration.jobProperties, testConfiguration.itClass, triggeringContext)
 
