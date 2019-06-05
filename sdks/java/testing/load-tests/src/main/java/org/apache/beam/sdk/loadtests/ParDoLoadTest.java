@@ -25,7 +25,7 @@ import org.apache.beam.sdk.metrics.Counter;
 import org.apache.beam.sdk.metrics.Metrics;
 import org.apache.beam.sdk.options.Default;
 import org.apache.beam.sdk.options.Description;
-import org.apache.beam.sdk.testutils.metrics.ByteMonitor;
+import org.apache.beam.sdk.testutils.metrics.SamplingByteMonitor;
 import org.apache.beam.sdk.transforms.DoFn;
 import org.apache.beam.sdk.transforms.ParDo;
 import org.apache.beam.sdk.values.KV;
@@ -85,7 +85,7 @@ public class ParDoLoadTest extends LoadTest<ParDoLoadTest.Options> {
         pipeline
             .apply("Read input", readFromSource(sourceOptions))
             .apply(ParDo.of(runtimeMonitor))
-            .apply(ParDo.of(new ByteMonitor<>(METRICS_NAMESPACE, "totalBytes.count")));
+            .apply(ParDo.of(new SamplingByteMonitor<>(METRICS_NAMESPACE, "totalBytes.count")));
 
     for (int i = 0; i < options.getIterations(); i++) {
       input =

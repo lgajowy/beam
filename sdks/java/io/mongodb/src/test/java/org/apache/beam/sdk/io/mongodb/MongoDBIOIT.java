@@ -38,7 +38,7 @@ import org.apache.beam.sdk.options.PipelineOptionsFactory;
 import org.apache.beam.sdk.testing.PAssert;
 import org.apache.beam.sdk.testing.TestPipeline;
 import org.apache.beam.sdk.testutils.NamedTestResult;
-import org.apache.beam.sdk.testutils.metrics.ByteMonitor;
+import org.apache.beam.sdk.testutils.metrics.SamplingByteMonitor;
 import org.apache.beam.sdk.testutils.metrics.CountMonitor;
 import org.apache.beam.sdk.testutils.metrics.IOITMetrics;
 import org.apache.beam.sdk.testutils.metrics.MetricsReader;
@@ -146,7 +146,7 @@ public class MongoDBIOIT {
         .apply("Produce documents", MapElements.via(new LongToDocumentFn()))
         .apply("Collect write time metric", ParDo.of(new TimeMonitor<>(NAMESPACE, "write_time")))
         .apply("Collect item count", ParDo.of(new CountMonitor<>(NAMESPACE, "item_count")))
-        .apply("Collect byte count", ParDo.of(new ByteMonitor<>(NAMESPACE, "byte_count")))
+        .apply("Collect byte count", ParDo.of(new SamplingByteMonitor<>(NAMESPACE, "byte_count")))
         .apply(
             "Write documents to MongoDB",
             MongoDbIO.write()

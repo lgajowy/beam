@@ -37,7 +37,7 @@ import org.apache.beam.sdk.io.hadoop.SerializableConfiguration;
 import org.apache.beam.sdk.testing.PAssert;
 import org.apache.beam.sdk.testing.TestPipeline;
 import org.apache.beam.sdk.testutils.NamedTestResult;
-import org.apache.beam.sdk.testutils.metrics.ByteMonitor;
+import org.apache.beam.sdk.testutils.metrics.SamplingByteMonitor;
 import org.apache.beam.sdk.testutils.metrics.CountMonitor;
 import org.apache.beam.sdk.testutils.metrics.IOITMetrics;
 import org.apache.beam.sdk.testutils.metrics.MetricsReader;
@@ -172,7 +172,7 @@ public class HadoopFormatIOIT {
         .apply("Produce db rows", ParDo.of(new TestRow.DeterministicallyConstructTestRowFn()))
         .apply("Prevent fusion before writing", Reshuffle.viaRandomKey())
         .apply("Collect write time", ParDo.of(new TimeMonitor<>(NAMESPACE, "write_time")))
-        .apply("Count bytes", ParDo.of(new ByteMonitor<>(NAMESPACE, "byte_count")))
+        .apply("Count bytes", ParDo.of(new SamplingByteMonitor<>(NAMESPACE, "byte_count")))
         .apply("Count items", ParDo.of(new CountMonitor<>(NAMESPACE, "item_count")))
         .apply("Construct rows for DBOutputFormat", ParDo.of(new ConstructDBOutputFormatRowFn()))
         .apply(

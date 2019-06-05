@@ -26,6 +26,7 @@ dependencies {
   shadow project(path: ":sdks:java:core", configuration: "shadow")
   shadow library.java.vendored_guava_20_0
   shadow library.java.google_cloud_bigquery
+  shadow library.java.commons_math3
   shadow project(path: ":sdks:java:extensions:google-cloud-platform-core", configuration: "shadow")
 
   shadowTest library.java.junit

@@ -25,7 +25,7 @@ import java.util.Optional;
 import org.apache.beam.sdk.io.synthetic.SyntheticStep;
 import org.apache.beam.sdk.options.Default;
 import org.apache.beam.sdk.options.Description;
-import org.apache.beam.sdk.testutils.metrics.ByteMonitor;
+import org.apache.beam.sdk.testutils.metrics.SamplingByteMonitor;
 import org.apache.beam.sdk.testutils.metrics.TimeMonitor;
 import org.apache.beam.sdk.transforms.Combine;
 import org.apache.beam.sdk.transforms.Count;
@@ -124,7 +124,7 @@ public class CombineLoadTest extends LoadTest<CombineLoadTest.Options> {
                 ParDo.of(new TimeMonitor<>(METRICS_NAMESPACE, "runtime")))
             .apply(
                 "Collect metrics",
-                ParDo.of(new ByteMonitor<>(METRICS_NAMESPACE, "totalBytes.count")));
+                ParDo.of(new SamplingByteMonitor<>(METRICS_NAMESPACE, "totalBytes.count")));
 
     input = applyWindowing(input);
 

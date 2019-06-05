@@ -24,7 +24,7 @@ import java.util.Optional;
 import org.apache.beam.sdk.io.synthetic.SyntheticStep;
 import org.apache.beam.sdk.options.Default;
 import org.apache.beam.sdk.options.Description;
-import org.apache.beam.sdk.testutils.metrics.ByteMonitor;
+import org.apache.beam.sdk.testutils.metrics.SamplingByteMonitor;
 import org.apache.beam.sdk.transforms.DoFn;
 import org.apache.beam.sdk.transforms.GroupByKey;
 import org.apache.beam.sdk.transforms.ParDo;
@@ -88,7 +88,7 @@ public class GroupByKeyLoadTest extends LoadTest<GroupByKeyLoadTest.Options> {
             .apply("Collect start time metrics", ParDo.of(runtimeMonitor))
             .apply(
                 "Total bytes monitor",
-                ParDo.of(new ByteMonitor<>(METRICS_NAMESPACE, "totalBytes.count")));
+                ParDo.of(new SamplingByteMonitor<>(METRICS_NAMESPACE, "totalBytes.count")));
 
     input = applyWindowing(input);
 

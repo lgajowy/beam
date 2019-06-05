@@ -20,7 +20,9 @@ package org.apache.beam.sdk.testutils.metrics;
 import java.util.Collection;
 import java.util.NoSuchElementException;
 import java.util.Optional;
+import java.util.OptionalDouble;
 import java.util.Set;
+import java.util.function.DoubleSupplier;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 import java.util.stream.StreamSupport;
@@ -65,6 +67,7 @@ public class MetricsReader {
     return new MetricsReader(result, namespace, now);
   }
 
+
   /**
    * Return the current value for a long counter, or -1 if can't be retrieved. Note this uses only
    * attempted metrics because some runners don't support committed metrics.
@@ -88,6 +91,16 @@ public class MetricsReader {
       LOG.error("Failed to get metric {}, from namespace {}", name, namespace);
     }
     return ERRONEOUS_METRIC_VALUE;
+  }
+
+
+  public double getMean(String name) {
+    Iterable<MetricResult<DistributionResult>> distributions = getDistributions(name);
+
+    OptionalDouble average = StreamSupport.stream(distributions.spliterator(), true)
+        .mapToDouble(element -> element.getAttempted().getMean()).average();
+
+    return average.isPresent() ? average.getAsDouble() : -1;
   }
 
   /**

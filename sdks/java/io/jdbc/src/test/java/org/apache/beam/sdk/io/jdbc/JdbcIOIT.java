@@ -37,7 +37,7 @@ import org.apache.beam.sdk.io.common.TestRow;
 import org.apache.beam.sdk.testing.PAssert;
 import org.apache.beam.sdk.testing.TestPipeline;
 import org.apache.beam.sdk.testutils.NamedTestResult;
-import org.apache.beam.sdk.testutils.metrics.ByteMonitor;
+import org.apache.beam.sdk.testutils.metrics.SamplingByteMonitor;
 import org.apache.beam.sdk.testutils.metrics.CountMonitor;
 import org.apache.beam.sdk.testutils.metrics.IOITMetrics;
 import org.apache.beam.sdk.testutils.metrics.MetricsReader;
@@ -188,7 +188,7 @@ public class JdbcIOIT {
         .apply(GenerateSequence.from(0).to(numberOfRows))
         .apply(ParDo.of(new TestRow.DeterministicallyConstructTestRowFn()))
         .apply(ParDo.of(new TimeMonitor<>(NAMESPACE, "write_time")))
-        .apply(ParDo.of(new ByteMonitor<>(NAMESPACE, "byte_count")))
+        .apply(ParDo.of(new SamplingByteMonitor<>(NAMESPACE, "byte_count")))
         .apply(ParDo.of(new CountMonitor<>(NAMESPACE, "item_count")))
         .apply(
             JdbcIO.<TestRow>write()

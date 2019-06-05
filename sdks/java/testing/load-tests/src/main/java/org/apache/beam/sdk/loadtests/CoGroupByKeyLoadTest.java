@@ -27,7 +27,7 @@ import org.apache.beam.sdk.io.synthetic.SyntheticStep;
 import org.apache.beam.sdk.options.Default;
 import org.apache.beam.sdk.options.Description;
 import org.apache.beam.sdk.options.Validation;
-import org.apache.beam.sdk.testutils.metrics.ByteMonitor;
+import org.apache.beam.sdk.testutils.metrics.SamplingByteMonitor;
 import org.apache.beam.sdk.transforms.DoFn;
 import org.apache.beam.sdk.transforms.ParDo;
 import org.apache.beam.sdk.transforms.join.CoGbkResult;
@@ -116,7 +116,7 @@ public class CoGroupByKeyLoadTest extends LoadTest<CoGroupByKeyLoadTest.Options>
         .apply("Ungroup and reiterate", ParDo.of(new UngroupAndReiterate(options.getIterations())))
         .apply(
             "Collect total bytes",
-            ParDo.of(new ByteMonitor<>(METRICS_NAMESPACE, "totalBytes.count")))
+            ParDo.of(new SamplingByteMonitor<>(METRICS_NAMESPACE, "totalBytes.count")))
         .apply("Collect end time metrics", ParDo.of(runtimeMonitor));
   }
 

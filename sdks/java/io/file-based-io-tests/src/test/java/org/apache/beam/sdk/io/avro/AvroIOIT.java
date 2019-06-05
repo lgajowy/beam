@@ -42,7 +42,7 @@ import org.apache.beam.sdk.io.common.HashingFn;
 import org.apache.beam.sdk.testing.PAssert;
 import org.apache.beam.sdk.testing.TestPipeline;
 import org.apache.beam.sdk.testutils.NamedTestResult;
-import org.apache.beam.sdk.testutils.metrics.ByteMonitor;
+import org.apache.beam.sdk.testutils.metrics.SamplingByteMonitor;
 import org.apache.beam.sdk.testutils.metrics.CountMonitor;
 import org.apache.beam.sdk.testutils.metrics.IOITMetrics;
 import org.apache.beam.sdk.testutils.metrics.MetricsReader;
@@ -122,7 +122,7 @@ public class AvroIOIT {
             .apply("Produce Avro records", ParDo.of(new DeterministicallyConstructAvroRecordsFn()))
             .setCoder(AvroCoder.of(AVRO_SCHEMA))
             .apply("Collect start time", ParDo.of(new TimeMonitor<>(AVRO_NAMESPACE, "writeStart")))
-            .apply("Collect byte count", ParDo.of(new ByteMonitor<>(AVRO_NAMESPACE, "byteCount")))
+            .apply("Collect byte count", ParDo.of(new SamplingByteMonitor<>(AVRO_NAMESPACE, "byteCount")))
             .apply("Collect item count", ParDo.of(new CountMonitor<>(AVRO_NAMESPACE, "itemCount")))
             .apply(
                 "Write Avro records to files",

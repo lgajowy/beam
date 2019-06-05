@@ -39,7 +39,7 @@ import org.apache.beam.sdk.io.common.HashingFn;
 import org.apache.beam.sdk.testing.PAssert;
 import org.apache.beam.sdk.testing.TestPipeline;
 import org.apache.beam.sdk.testutils.NamedTestResult;
-import org.apache.beam.sdk.testutils.metrics.ByteMonitor;
+import org.apache.beam.sdk.testutils.metrics.SamplingByteMonitor;
 import org.apache.beam.sdk.testutils.metrics.CountMonitor;
 import org.apache.beam.sdk.testutils.metrics.IOITMetrics;
 import org.apache.beam.sdk.testutils.metrics.MetricsReader;
@@ -122,7 +122,7 @@ public class TextIOIT {
                 "Collect write start time",
                 ParDo.of(new TimeMonitor<>(FILEIOIT_NAMESPACE, "startTime")))
             .apply(
-                "Collect byte count", ParDo.of(new ByteMonitor<>(FILEIOIT_NAMESPACE, "byteCount")))
+                "Collect sampled byte count", ParDo.of(new SamplingByteMonitor<>(FILEIOIT_NAMESPACE, "sampledBytesPerElement")))
             .apply(
                 "Collect element count",
                 ParDo.of(new CountMonitor<>(FILEIOIT_NAMESPACE, "itemCount")))
@@ -199,8 +199,9 @@ public class TextIOIT {
 
     metricSuppliers.add(
         (metricsReader -> {
-          double totalBytes = metricsReader.getCounterMetric("byteCount");
-          return NamedTestResult.create(uuid, timestamp, "byte_count", totalBytes);
+          double meanBytesPerElement = metricsReader.getMean("sampledBytesPerElement");
+          long estimatedBytes = (long) (meanBytesPerElement * numberOfTextLines);
+          return NamedTestResult.create(uuid, timestamp, "byte_count", estimatedBytes);
         }));
 
     metricSuppliers.add(

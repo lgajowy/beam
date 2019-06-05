@@ -39,7 +39,7 @@ import org.apache.beam.sdk.io.common.HashingFn;
 import org.apache.beam.sdk.testing.PAssert;
 import org.apache.beam.sdk.testing.TestPipeline;
 import org.apache.beam.sdk.testutils.NamedTestResult;
-import org.apache.beam.sdk.testutils.metrics.ByteMonitor;
+import org.apache.beam.sdk.testutils.metrics.SamplingByteMonitor;
 import org.apache.beam.sdk.testutils.metrics.CountMonitor;
 import org.apache.beam.sdk.testutils.metrics.IOITMetrics;
 import org.apache.beam.sdk.testutils.metrics.MetricsReader;
@@ -124,7 +124,7 @@ public class TFRecordIOIT {
         .apply(
             "Record time before writing",
             ParDo.of(new TimeMonitor<>(TFRECORD_NAMESPACE, "writeTime")))
-        .apply("Collect byte count", ParDo.of(new ByteMonitor<>(TFRECORD_NAMESPACE, "byteCount")))
+        .apply("Collect byte count", ParDo.of(new SamplingByteMonitor<>(TFRECORD_NAMESPACE, "byteCount")))
         .apply(
             "Collect element count", ParDo.of(new CountMonitor<>(TFRECORD_NAMESPACE, "itemCount")))
         .apply("Write content to files", writeTransform);

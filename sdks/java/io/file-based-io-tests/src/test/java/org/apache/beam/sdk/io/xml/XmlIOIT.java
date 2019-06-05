@@ -42,7 +42,7 @@ import org.apache.beam.sdk.options.Description;
 import org.apache.beam.sdk.testing.PAssert;
 import org.apache.beam.sdk.testing.TestPipeline;
 import org.apache.beam.sdk.testutils.NamedTestResult;
-import org.apache.beam.sdk.testutils.metrics.ByteMonitor;
+import org.apache.beam.sdk.testutils.metrics.SamplingByteMonitor;
 import org.apache.beam.sdk.testutils.metrics.CountMonitor;
 import org.apache.beam.sdk.testutils.metrics.IOITMetrics;
 import org.apache.beam.sdk.testutils.metrics.MetricsReader;
@@ -131,7 +131,7 @@ public class XmlIOIT {
                 "Gather write start time",
                 ParDo.of(new TimeMonitor<>(XMLIOIT_NAMESPACE, "writeStart")))
             .apply(
-                "Gather byte count", ParDo.of(new ByteMonitor<>(XMLIOIT_NAMESPACE, "byte_count")))
+                "Gather byte count", ParDo.of(new SamplingByteMonitor<>(XMLIOIT_NAMESPACE, "byte_count")))
             .apply(
                 "Gather element count",
                 ParDo.of(new CountMonitor<>(XMLIOIT_NAMESPACE, "item_count")))

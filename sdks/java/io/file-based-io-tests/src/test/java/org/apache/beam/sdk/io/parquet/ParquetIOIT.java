@@ -40,7 +40,7 @@ import org.apache.beam.sdk.io.common.HashingFn;
 import org.apache.beam.sdk.testing.PAssert;
 import org.apache.beam.sdk.testing.TestPipeline;
 import org.apache.beam.sdk.testutils.NamedTestResult;
-import org.apache.beam.sdk.testutils.metrics.ByteMonitor;
+import org.apache.beam.sdk.testutils.metrics.SamplingByteMonitor;
 import org.apache.beam.sdk.testutils.metrics.CountMonitor;
 import org.apache.beam.sdk.testutils.metrics.IOITMetrics;
 import org.apache.beam.sdk.testutils.metrics.MetricsReader;
@@ -140,7 +140,7 @@ public class ParquetIOIT {
                 "Gather read start time",
                 ParDo.of(new TimeMonitor<>(PARQUET_NAMESPACE, "readStart")))
             .apply(
-                "Collect byte count", ParDo.of(new ByteMonitor<>(PARQUET_NAMESPACE, "byteCount")))
+                "Collect byte count", ParDo.of(new SamplingByteMonitor<>(PARQUET_NAMESPACE, "byteCount")))
             .apply(
                 "Collect element count",
                 ParDo.of(new CountMonitor<>(PARQUET_NAMESPACE, "itemCount")))
