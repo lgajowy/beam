@@ -24,6 +24,7 @@ import static org.apache.beam.sdk.io.common.FileBasedIOITHelper.readFileBasedIOI
 
 import com.google.cloud.Timestamp;
 import java.util.HashSet;
+import java.util.OptionalDouble;
 import java.util.Set;
 import java.util.UUID;
 import java.util.function.Function;
@@ -41,6 +42,7 @@ import org.apache.beam.sdk.testing.TestPipeline;
 import org.apache.beam.sdk.testutils.NamedTestResult;
 import org.apache.beam.sdk.testutils.metrics.IOITMetrics;
 import org.apache.beam.sdk.testutils.metrics.MetricsReader;
+import org.apache.beam.sdk.testutils.metrics.SamplingByteMonitor;
 import org.apache.beam.sdk.testutils.metrics.TimeMonitor;
 import org.apache.beam.sdk.transforms.Combine;
 import org.apache.beam.sdk.transforms.ParDo;
@@ -77,7 +79,7 @@ import org.slf4j.LoggerFactory;
 @RunWith(JUnit4.class)
 public class TextIOIT {
   private static final Logger LOG = LoggerFactory.getLogger(TextIOIT.class);
-
+  private static final String FILEIOIT_NAMESPACE = TextIOIT.class.getName();
   private static String filenamePrefix;
   private static Integer numberOfTextLines;
   private static Compression compressionType;
@@ -85,8 +87,6 @@ public class TextIOIT {
   private static String bigQueryDataset;
   private static String bigQueryTable;
   private static boolean gatherGcsPerformanceMetrics;
-  private static final String FILEIOIT_NAMESPACE = TextIOIT.class.getName();
-
   @Rule public TestPipeline pipeline = TestPipeline.create();
 
   @BeforeClass
@@ -110,12 +110,18 @@ public class TextIOIT {
       write = write.withNumShards(numShards);
     }
 
+    int samples = (int) (0.001 * numberOfTextLines); // we want to sample 1% of all records
+    double sampleRate = samples / numberOfTextLines.doubleValue();
+
     PCollection<String> testFilenames =
         pipeline
             .apply("Generate sequence", GenerateSequence.from(0).to(numberOfTextLines))
             .apply(
                 "Produce text lines",
                 ParDo.of(new FileBasedIOITHelper.DeterministicallyConstructTestTextLineFn()))
+            .apply(
+                ParDo.of(
+                    new SamplingByteMonitor<>(FILEIOIT_NAMESPACE, "sampled_bytes", sampleRate)))
             .apply(
                 "Collect write start time",
                 ParDo.of(new TimeMonitor<>(FILEIOIT_NAMESPACE, "startTime")))
@@ -188,6 +194,17 @@ public class TextIOIT {
           long readEndTime = reader.getEndTimeMetric("endTime");
           double runTime = (readEndTime - writeStartTime) / 1e3;
           return NamedTestResult.create(uuid, timestamp, "run_time", runTime);
+        });
+    metricSuppliers.add(
+        (reader) -> {
+          OptionalDouble meanElementByteSize = reader.getMeanElementByteSize("sampled_bytes");
+
+          if (meanElementByteSize.isPresent()) {
+            double totalBytesEstimate = meanElementByteSize.getAsDouble() * numberOfTextLines;
+            return NamedTestResult.create(uuid, timestamp, "sampled_bytes", totalBytesEstimate);
+          } else {
+            throw new RuntimeException("Unable to get sampled bytes size metric.");
+          }
         });
 
     if (gatherGcsPerformanceMetrics) {

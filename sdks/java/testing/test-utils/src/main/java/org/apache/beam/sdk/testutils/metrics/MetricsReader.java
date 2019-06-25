@@ -20,6 +20,7 @@ package org.apache.beam.sdk.testutils.metrics;
 import java.util.Collection;
 import java.util.NoSuchElementException;
 import java.util.Optional;
+import java.util.OptionalDouble;
 import java.util.Set;
 import java.util.function.Function;
 import java.util.stream.Collectors;
@@ -121,6 +122,15 @@ public class MetricsReader {
   public long getEndTimeMetric(String name) {
     Iterable<MetricResult<DistributionResult>> timeDistributions = getDistributions(name);
     return getGreatestMax(timeDistributions);
+  }
+
+  public OptionalDouble getMeanElementByteSize(String name) {
+    Iterable<MetricResult<DistributionResult>> sizeDistributions = getDistributions(name);
+
+    OptionalDouble meanByteSize = StreamSupport.stream(sizeDistributions.spliterator(), true)
+        .mapToDouble(element -> element.getAttempted().getMean()).average();
+
+    return meanByteSize;
   }
 
   private Long getGreatestMax(Iterable<MetricResult<DistributionResult>> distributions) {
