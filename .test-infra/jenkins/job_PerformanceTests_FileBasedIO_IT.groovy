@@ -16,16 +16,107 @@
  * limitations under the License.
  */
 
-import CommonJobProperties as commonJobProperties
+import CommonJobProperties as common
+
+interface Step {
+  create(context)
+}
+
+class StepList implements Step {
+  List<Step> steps
+
+  @Override
+  def create(context) {
+    steps.forEach { it.create(context)}
+  }
+}
+
+abstract class Job { // TODO:do I need that or PhraseTriggeringJob can be reused?
+  String name
+  String description
+  String prTriggerPhrase
+  String githubName
+  StepList steps
+
+  abstract void define(jenkinsJob)
+}
+
+class IOITJob extends Job {
+  @Override
+  void define(jenkinsJob) { //freestyle job
+    jenkinsJob(this.name) {
+      description(this.description)
+      common.setTopLevelMainJobProperties(jenkinsJob)
+      common.enablePhraseTriggeringFromPullRequest(jenkinsJob, this.githubName, this.prTriggerPhrase)
+      common.setAutoJob(jenkinsJob, 'H */6 * * *')
+      this.steps.create(jenkinsJob)
+    }
+  }
+}
+
+class JavaIOTest implements Step { // TODO: what if I want to run Python IOIT in the future?
+  String name
+  String task
+  Map options
+  String filesystem
+  String runner
+
+  @Override
+  def create(context) {
+    context {
+      steps {
+        gradle {
+          rootBuildScriptDir(common.checkoutDir)
+          common.setGradleSwitches(delegate)
+          switches("--info")
+          switches("-DintegrationTestPipelineOptions=\'${common.joinPipelineOptions(options)}\'")
+          switches("-Dfilesystem=\'${filesystem}\'")
+          switches("-DintegrationTestRunner=\'${runner}\'")
+          tasks("${task} --tests ${name}")
+        }
+      }
+    }
+  }
+}
+
+def dataflowSpecificOptions = { name -> [
+          runner        : 'DataflowRunner',
+          project       : 'apache-beam-testing',
+          tempRoot      : 'gs://temp-storage-for-perf-tests',
+          filenamePrefix: "gs://temp-storage-for-perf-tests/${name}/\${BUILD_ID}/",
+  ]
+}
+
+List jobs = [
+        new IOITJob(
+                name: 'beam_PerformanceTests_TextIOIT',
+                description: 'Runs PerfKit tests for TextIOIT',
+                prTriggerPhrase: 'Run Java TextIO Performance Test',
+                githubName: 'Java TextIO Performance Test',
+                steps: new StepList(steps: [
+                        new JavaIOTest(
+                                name: 'org.apache.beam.sdk.io.text.TextIOIT',
+                                options: [
+                                        bigQueryDataset: 'beam_performance',
+                                        bigQueryTable  : 'textioit_results',
+                                        numberOfRecords: '1000000'
+                                ] + dataflowSpecificOptions('textIOIT'),
+                                filesystem: 'gcs',
+                                runner: 'dataflow'
+                        )]
+                )
+        )
+]
+
 
 def jobConfigurations = [
         [
                 jobName           : 'beam_PerformanceTests_TextIOIT',
                 jobDescription    : 'Runs PerfKit tests for TextIOIT',
-                itClass           : 'org.apache.beam.sdk.io.text.TextIOIT',
-                prCommitStatusName: 'Java TextIO Performance Test',
-                prTriggerPhase    : 'Run Java TextIO Performance Test',
-                pipelineOptions: [
+                testName           : 'org.apache.beam.sdk.io.text.TextIOIT',
+                githubName: 'Java TextIO Performance Test',
+                prTriggerPhrase    : 'Run Java TextIO Performance Test',
+                testOptions: [
                         bigQueryDataset: 'beam_performance',
                         bigQueryTable: 'textioit_results',
                         numberOfRecords: '1000000'
@@ -35,10 +126,10 @@ def jobConfigurations = [
         [
                 jobName            : 'beam_PerformanceTests_Compressed_TextIOIT',
                 jobDescription     : 'Runs PerfKit tests for TextIOIT with GZIP compression',
-                itClass            : 'org.apache.beam.sdk.io.text.TextIOIT',
-                prCommitStatusName : 'Java CompressedTextIO Performance Test',
-                prTriggerPhase     : 'Run Java CompressedTextIO Performance Test',
-                pipelineOptions: [
+                testName            : 'org.apache.beam.sdk.io.text.TextIOIT',
+                githubName : 'Java CompressedTextIO Performance Test',
+                prTriggerPhrase     : 'Run Java CompressedTextIO Performance Test',
+                testOptions: [
                         bigQueryDataset: 'beam_performance',
                         bigQueryTable: 'compressed_textioit_results',
                         numberOfRecords: '1000000',
@@ -48,10 +139,10 @@ def jobConfigurations = [
         [
                 jobName           : 'beam_PerformanceTests_ManyFiles_TextIOIT',
                 jobDescription    : 'Runs PerfKit tests for TextIOIT with many output files',
-                itClass           : 'org.apache.beam.sdk.io.text.TextIOIT',
-                prCommitStatusName: 'Java ManyFilesTextIO Performance Test',
-                prTriggerPhase    : 'Run Java ManyFilesTextIO Performance Test',
-                pipelineOptions: [
+                testName           : 'org.apache.beam.sdk.io.text.TextIOIT',
+                githubName: 'Java ManyFilesTextIO Performance Test',
+                prTriggerPhrase    : 'Run Java ManyFilesTextIO Performance Test',
+                testOptions: [
                         bigQueryDataset: 'beam_performance',
                         bigQueryTable: 'many_files_textioit_results',
                         reportGcsPerformanceMetrics: 'true',
@@ -64,10 +155,10 @@ def jobConfigurations = [
         [
                 jobName           : 'beam_PerformanceTests_AvroIOIT',
                 jobDescription    : 'Runs PerfKit tests for AvroIOIT',
-                itClass           : 'org.apache.beam.sdk.io.avro.AvroIOIT',
-                prCommitStatusName: 'Java AvroIO Performance Test',
-                prTriggerPhase    : 'Run Java AvroIO Performance Test',
-                pipelineOptions: [
+                testName           : 'org.apache.beam.sdk.io.avro.AvroIOIT',
+                githubName: 'Java AvroIO Performance Test',
+                prTriggerPhrase    : 'Run Java AvroIO Performance Test',
+                testOptions: [
                         numberOfRecords: '1000000',
                         bigQueryDataset: 'beam_performance',
                         bigQueryTable: 'avroioit_results',
@@ -76,10 +167,10 @@ def jobConfigurations = [
         [
                 jobName           : 'beam_PerformanceTests_TFRecordIOIT',
                 jobDescription    : 'Runs PerfKit tests for beam_PerformanceTests_TFRecordIOIT',
-                itClass           : 'org.apache.beam.sdk.io.tfrecord.TFRecordIOIT',
-                prCommitStatusName: 'Java TFRecordIO Performance Test',
-                prTriggerPhase    : 'Run Java TFRecordIO Performance Test',
-                pipelineOptions: [
+                testName           : 'org.apache.beam.sdk.io.tfrecord.TFRecordIOIT',
+                githubName: 'Java TFRecordIO Performance Test',
+                prTriggerPhrase    : 'Run Java TFRecordIO Performance Test',
+                testOptions: [
                         bigQueryDataset: 'beam_performance',
                         bigQueryTable: 'tfrecordioit_results',
                         numberOfRecords: '1000000'
@@ -88,10 +179,10 @@ def jobConfigurations = [
         [
                 jobName           : 'beam_PerformanceTests_XmlIOIT',
                 jobDescription    : 'Runs PerfKit tests for beam_PerformanceTests_XmlIOIT',
-                itClass           : 'org.apache.beam.sdk.io.xml.XmlIOIT',
-                prCommitStatusName: 'Java XmlIOPerformance Test',
-                prTriggerPhase    : 'Run Java XmlIO Performance Test',
-                pipelineOptions: [
+                testName           : 'org.apache.beam.sdk.io.xml.XmlIOIT',
+                githubName: 'Java XmlIOPerformance Test',
+                prTriggerPhrase    : 'Run Java XmlIO Performance Test',
+                testOptions: [
                         bigQueryDataset: 'beam_performance',
                         bigQueryTable: 'xmlioit_results',
                         numberOfRecords: '100000000',
@@ -101,10 +192,10 @@ def jobConfigurations = [
         [
                 jobName           : 'beam_PerformanceTests_ParquetIOIT',
                 jobDescription    : 'Runs PerfKit tests for beam_PerformanceTests_ParquetIOIT',
-                itClass           : 'org.apache.beam.sdk.io.parquet.ParquetIOIT',
-                prCommitStatusName: 'Java ParquetIOPerformance Test',
-                prTriggerPhase    : 'Run Java ParquetIO Performance Test',
-                pipelineOptions: [
+                testName           : 'org.apache.beam.sdk.io.parquet.ParquetIOIT',
+                githubName: 'Java ParquetIOPerformance Test',
+                prTriggerPhrase    : 'Run Java ParquetIO Performance Test',
+                testOptions: [
                         bigQueryDataset: 'beam_performance',
                         bigQueryTable: 'parquetioit_results',
                         numberOfRecords: '100000000'
@@ -112,45 +203,8 @@ def jobConfigurations = [
         ]
 ]
 
-for (jobConfiguration in jobConfigurations) {
-    createFileBasedIOITTestJob(jobConfiguration)
-}
 
 
-private void createFileBasedIOITTestJob(jobConfiguration) {
-
-    job(jobConfiguration.jobName) {
-        description(jobConfiguration.jobDescription)
-        commonJobProperties.setTopLevelMainJobProperties(delegate)
-        commonJobProperties.enablePhraseTriggeringFromPullRequest(
-                delegate,
-                jobConfiguration.prCommitStatusName,
-                jobConfiguration.prTriggerPhase)
-        commonJobProperties.setAutoJob(
-                delegate,
-                'H */6 * * *')
-
-        def dataflowSpecificOptions = [
-                runner        : 'DataflowRunner',
-                project       : 'apache-beam-testing',
-                tempRoot      : 'gs://temp-storage-for-perf-tests',
-                filenamePrefix: "gs://temp-storage-for-perf-tests/${jobConfiguration.jobName}/\${BUILD_ID}/",
-        ]
-        Map allPipelineOptions = dataflowSpecificOptions << jobConfiguration.pipelineOptions
-        String runner = "dataflow"
-        String filesystem = "gcs"
-        String testTask = ":sdks:java:io:file-based-io-tests:integrationTest"
-
-        steps {
-            gradle {
-                rootBuildScriptDir(commonJobProperties.checkoutDir)
-                commonJobProperties.setGradleSwitches(delegate)
-                switches("--info")
-                switches("-DintegrationTestPipelineOptions=\'${commonJobProperties.joinPipelineOptions(allPipelineOptions)}\'")
-                switches("-Dfilesystem=\'${filesystem}\'")
-                switches("-DintegrationTestRunner=\'${runner}\'")
-                tasks("${testTask} --tests ${jobConfiguration.itClass}")
-            }
-        }
-    }
+for (jobDeclaration in jobs) {
+  jobDeclaration.define(job)
 }
