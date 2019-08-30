@@ -26,6 +26,7 @@ import org.gradle.api.GradleException
 import org.gradle.api.Plugin
 import org.gradle.api.Project
 import org.gradle.api.artifacts.Configuration
+import org.gradle.api.artifacts.Dependency
 import org.gradle.api.artifacts.ProjectDependency
 import org.gradle.api.file.FileTree
 import org.gradle.api.plugins.quality.Checkstyle
@@ -1292,6 +1293,7 @@ class BeamModulePlugin implements Plugin<Project> {
         outputs.upToDateWhen { false }
 
         include "**/*IT.class"
+        exclude "/Users/lukasz/Projects/apache-beam/beam/sdks/java/io/mongodb/build/resources/test/**"
 
         def pipelineOptionsString = configuration.integrationTestPipelineOptions
         if(pipelineOptionsString && configuration.runner?.equalsIgnoreCase('dataflow')) {
@@ -1336,7 +1338,16 @@ class BeamModulePlugin implements Plugin<Project> {
         }
 
         if (runner?.equalsIgnoreCase('flink')) {
-          testRuntime it.project(path: ":runners:flink:1.5", configuration: 'testRuntime')
+          testRuntime (it.project(path: ":runners:flink:1.7", configuration: 'testRuntime'))
+
+          Dependency directRunnerDependency = it.project(path: ":runners:direct-java")
+          project.configurations.testRuntimeClasspath {
+            exclude group: directRunnerDependency.group, module: directRunnerDependency.name
+          }
+
+          removeNonexistentClasspathResource(project, "${project.buildDir}/resources/main")
+          removeNonexistentClasspathResource(project, "${project.buildDir}/resources/test")
+          removeNonexistentClasspathResource(project, "${project.buildDir}/classes/java/main")
         }
 
         if (runner?.equalsIgnoreCase('spark')) {
@@ -2038,6 +2049,14 @@ class BeamModulePlugin implements Plugin<Project> {
         ->
         addPortableWordCountTask(false)
         addPortableWordCountTask(true)
+      }
+    }
+  }
+
+  private void removeNonexistentClasspathResource(Project project, String path) {
+    project.sourceSets.all {
+      if (!project.file(path).exists()) {
+        runtimeClasspath -= project.files(path)
       }
     }
   }
