@@ -48,9 +48,11 @@ dependencies {
   compile library.java.vendored_guava_26_0_jre
   compile library.java.slf4j_api
   compile project(":sdks:java:io:hadoop-common")
+
   provided library.java.hadoop_common
   provided library.java.hadoop_hdfs
   provided library.java.hadoop_mapreduce_client_core
+  provided "commons-httpclient:commons-httpclient:3.1"
   testCompile project(path: ":sdks:java:core", configuration: "shadowTest")
   testCompile project(path: ":sdks:java:io:common", configuration: "testRuntime")
   testCompile project(path: ":sdks:java:testing:test-utils", configuration: "testRuntime")
