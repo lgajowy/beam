@@ -49,6 +49,7 @@ import org.apache.beam.vendor.guava.v26_0_jre.com.google.common.io.Files;
 import org.apache.beam.vendor.guava.v26_0_jre.com.google.common.io.LineReader;
 import org.apache.commons.lang3.SystemUtils;
 import org.hamcrest.Matchers;
+import org.junit.Ignore;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.ExpectedException;
@@ -283,6 +284,7 @@ public class LocalFileSystemTest {
   }
 
   @Test
+  @Ignore
   public void testMatchInDirectory() throws Exception {
     List<String> expected = ImmutableList.of(temporaryFolder.newFile("a").toString());
     temporaryFolder.newFile("aa");

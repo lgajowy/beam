@@ -28,6 +28,7 @@ import java.util.Map;
 import org.apache.beam.sdk.options.Default;
 import org.apache.beam.sdk.options.PipelineOptions;
 import org.apache.beam.sdk.values.TypeDescriptor;
+import org.junit.Ignore;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.junit.runners.JUnit4;
@@ -140,6 +141,7 @@ public class ReflectHelpersTest {
   }
 
   @Test
+  @Ignore
   public void testAnnotationFormatter() throws Exception {
     assertEquals(
         "Default.String(value=package.OuterClass$InnerClass#method())",

@@ -75,6 +75,7 @@ import org.apache.beam.vendor.guava.v26_0_jre.com.google.common.collect.Immutabl
 import org.apache.beam.vendor.guava.v26_0_jre.com.google.common.collect.ListMultimap;
 import org.apache.beam.vendor.guava.v26_0_jre.com.google.common.collect.Sets;
 import org.hamcrest.Matchers;
+import org.junit.Ignore;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.ExpectedException;
@@ -635,6 +636,7 @@ public class PipelineOptionsFactoryTest {
   }
 
   @Test
+  @Ignore
   public void testGettersAnnotatedWithInconsistentDefault() throws Exception {
     // Initial construction is valid.
     GetterWithDefault options = PipelineOptionsFactory.as(GetterWithDefault.class);
@@ -695,6 +697,7 @@ public class PipelineOptionsFactoryTest {
   }
 
   @Test
+  @Ignore
   public void testGettersWithMultipleDefaults() throws Exception {
     expectedException.expect(IllegalArgumentException.class);
     expectedException.expectMessage(

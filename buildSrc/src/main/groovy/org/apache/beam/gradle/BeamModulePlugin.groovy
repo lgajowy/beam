@@ -79,7 +79,7 @@ class BeamModulePlugin implements Plugin<Project> {
   /** A class defining the set of configurable properties accepted by applyJavaNature. */
   class JavaNatureConfiguration {
     /** Controls the JDK source language and target compatibility. */
-    double javaVersion = 1.8
+    double javaVersion = 11
 
     /** Controls whether the spotbugs plugin is enabled and configured. */
     boolean enableSpotbugs = true
@@ -375,7 +375,7 @@ class BeamModulePlugin implements Plugin<Project> {
     def google_cloud_core_version = "1.61.0"
     def google_cloud_spanner_version = "1.6.0"
     def grpc_version = "1.17.1"
-    def guava_version = "20.0"
+    def guava_version = "27.1-jre"
     def hadoop_version = "2.7.3"
     def hamcrest_version = "2.1"
     def jackson_version = "2.9.10"
@@ -682,9 +682,9 @@ class BeamModulePlugin implements Plugin<Project> {
           '-parameters',
           '-Xlint:all',
           '-Werror',
-          '-XepDisableWarningsInGeneratedCode',
-          '-XepExcludedPaths:(.*/)?(build/generated-src|build/generated.*avro-java|build/generated)/.*',
-          '-Xep:MutableConstantField:OFF' // Guava's immutable collections cannot appear on API surface.
+          //'-XepDisableWarningsInGeneratedCode',
+          //'-XepExcludedPaths:(.*/)?(build/generated-src|build/generated.*avro-java|build/generated)/.*',
+          //'-Xep:MutableConstantField:OFF' // Guava's immutable collections cannot appear on API surface.
         ]
         + (defaultLintSuppressions + configuration.disableLintWarnings).collect { "-Xlint:-${it}" })
       }
@@ -855,9 +855,9 @@ class BeamModulePlugin implements Plugin<Project> {
       }
 
       // Enable errorprone static analysis
-      project.apply plugin: 'net.ltgt.errorprone'
+      //project.apply plugin: 'net.ltgt.errorprone'
 
-      project.configurations.errorprone { resolutionStrategy.force 'com.google.errorprone:error_prone_core:2.3.1' }
+      //project.configurations.errorprone { resolutionStrategy.force 'com.google.errorprone:error_prone_core:2.3.1' }
 
       if (configuration.shadowClosure) {
         // Enables a plugin which can perform shading of classes. See the general comments
