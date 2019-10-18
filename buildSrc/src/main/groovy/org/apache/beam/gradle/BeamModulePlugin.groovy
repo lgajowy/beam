@@ -679,10 +679,7 @@ class BeamModulePlugin implements Plugin<Project> {
         options.compilerArgs += ([
           '-parameters',
           '-Xlint:all',
-          '-Werror',
-          '-XepDisableWarningsInGeneratedCode',
-          '-XepExcludedPaths:(.*/)?(build/generated-src|build/generated.*avro-java|build/generated)/.*',
-          '-Xep:MutableConstantField:OFF' // Guava's immutable collections cannot appear on API surface.
+          '-Werror'
         ]
         + (defaultLintSuppressions + configuration.disableLintWarnings).collect { "-Xlint:-${it}" })
       }
@@ -852,10 +849,24 @@ class BeamModulePlugin implements Plugin<Project> {
         project.tasks.analyzeDependencies.enabled = false
       }
 
-      // Enable errorprone static analysis
-      project.apply plugin: 'net.ltgt.errorprone'
 
-      project.configurations.errorprone { resolutionStrategy.force 'com.google.errorprone:error_prone_core:2.3.1' }
+      // TODO(lgajowy): using errorprone with JDK11 requires resolving: https://issues.apache.org/jira/browse/BEAM-8319
+      // Enable errorprone static analysis
+      if (project.javaVersion != "11") {
+        project.apply plugin: 'net.ltgt.errorprone'
+        project.configurations.errorprone {
+          resolutionStrategy.force 'com.google.errorprone:error_prone_core:2.3.1'
+        }
+
+        project.tasks.withType(JavaCompile) {
+          options.compilerArgs += [
+            '-XepDisableWarningsInGeneratedCode',
+            '-XepExcludedPaths:(.*/)?(build/generated-src|build/generated.*avro-java|build/generated)/.*',
+            '-Xep:MutableConstantField:OFF' // Guava's immutable collections cannot appear on API surface.
+          ]
+        }
+      }
+
 
       if (configuration.shadowClosure) {
         // Enables a plugin which can perform shading of classes. See the general comments
