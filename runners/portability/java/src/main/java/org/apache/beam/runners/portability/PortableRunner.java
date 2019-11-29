@@ -91,7 +91,8 @@ public class PortableRunner extends PipelineRunner<PipelineResult> {
     // Deduplicate artifacts.
     Set<String> pathsToStage = Sets.newHashSet();
     if (portableOptions.getFilesToStage() == null) {
-      pathsToStage.addAll(detectClassPathResourcesToStage(PortableRunner.class.getClassLoader()));
+      pathsToStage.addAll(
+          detectClassPathResourcesToStage(PortableRunner.class.getClassLoader(), options));
       if (pathsToStage.isEmpty()) {
         throw new IllegalArgumentException("No classpath elements found.");
       }
