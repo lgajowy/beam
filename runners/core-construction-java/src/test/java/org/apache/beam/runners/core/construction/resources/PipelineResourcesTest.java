@@ -32,7 +32,6 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 import org.apache.beam.sdk.options.PipelineOptionsFactory;
-import org.apache.beam.sdk.testing.RestoreSystemProperties;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.TemporaryFolder;
@@ -44,7 +43,6 @@ import org.junit.runners.JUnit4;
 public class PipelineResourcesTest {
 
   @Rule public transient TemporaryFolder tmpFolder = new TemporaryFolder();
-  @Rule public transient RestoreSystemProperties systemProperties = new RestoreSystemProperties();
 
   @Test
   public void testDetectsResourcesToStage() throws IOException {
