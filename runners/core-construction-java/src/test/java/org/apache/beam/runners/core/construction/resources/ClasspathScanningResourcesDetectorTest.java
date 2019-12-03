@@ -17,19 +17,22 @@
  */
 package org.apache.beam.runners.core.construction.resources;
 
+import static org.hamcrest.CoreMatchers.containsString;
+import static org.hamcrest.CoreMatchers.hasItem;
 import static org.hamcrest.CoreMatchers.hasItems;
 import static org.hamcrest.MatcherAssert.assertThat;
-import static org.hamcrest.collection.IsCollectionWithSize.hasSize;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertThrows;
+import static org.hamcrest.Matchers.not;
 
+import io.github.classgraph.ClassGraph;
 import java.io.File;
+import java.io.FileOutputStream;
 import java.io.IOException;
 import java.net.URL;
 import java.net.URLClassLoader;
 import java.util.List;
+import java.util.jar.JarOutputStream;
+import java.util.jar.Manifest;
 import org.apache.beam.sdk.testing.RestoreSystemProperties;
-import org.apache.beam.vendor.guava.v26_0_jre.com.google.common.collect.ImmutableList;
 import org.junit.Before;
 import org.junit.Rule;
 import org.junit.Test;
@@ -43,44 +46,62 @@ public class ClasspathScanningResourcesDetectorTest {
 
   private ClasspathScanningResourcesDetector detector;
 
+  private URLClassLoader classLoader;
+
   @Before
-  public void setUp() throws Exception {
-    detector = new ClasspathScanningResourcesDetector();
+  public void setUp() {
+    detector = new ClasspathScanningResourcesDetector(new ClassGraph());
   }
 
   @Test
-  public void detectClassPathResourceWithFileResources() throws Exception {
-    File file = tmpFolder.newFile("file");
-    File file2 = tmpFolder.newFile("file2");
-    URLClassLoader classLoader =
-        new URLClassLoader(new URL[] {file.toURI().toURL(), file2.toURI().toURL()});
+  public void shouldDetectDirectories() throws Exception {
+    File folder = tmpFolder.newFolder("folder1");
 
-    assertEquals(
-        ImmutableList.of(file.getAbsolutePath(), file2.getAbsolutePath()),
-        detector.detect(classLoader));
+    classLoader = new URLClassLoader(new URL[] {folder.toURI().toURL()});
+
+    assertThat(detector.detect(classLoader), hasItem(containsString(folder.getAbsolutePath())));
   }
 
   @Test
-  public void detectClassPathResourceFromJavaClassPathWhenTheresNoClassLoader() throws IOException {
-    String path = tmpFolder.newFile("file").getAbsolutePath();
-    String path2 = tmpFolder.newFile("file2").getAbsolutePath();
-    String classpath = String.join(File.pathSeparator, path, path2);
-    System.setProperty("java.class.path", classpath);
+  public void shouldDetectJarFiles() throws Exception {
+    File jarFile = createTestTmpJarFile("test");
+
+    classLoader = new URLClassLoader(new URL[] {jarFile.toURI().toURL()});
+
+    assertThat(detector.detect(classLoader), hasItem(containsString(jarFile.getAbsolutePath())));
+  }
+
+  private File createTestTmpJarFile(String name) throws IOException {
+    File jarFile = tmpFolder.newFile(name);
+    try (JarOutputStream os = new JarOutputStream(new FileOutputStream(jarFile), new Manifest())) {}
+    return jarFile;
+  }
+
+  @Test
+  public void shouldNotDetectOrdinaryFiles() throws Exception {
+    File textFile = tmpFolder.newFile("ordinaryTextFile.txt");
+
+    classLoader = new URLClassLoader(new URL[] {textFile.toURI().toURL()});
+
+    assertThat(
+        detector.detect(classLoader), not(hasItem(containsString(textFile.getAbsolutePath()))));
+  }
+
+  @Test
+  public void shouldDetectClassPathResourceFromJavaClassPathEnvVariable() throws IOException {
+    String path = tmpFolder.newFolder("folder").getAbsolutePath();
+    System.setProperty("java.class.path", path);
 
     List<String> resources = detector.detect(null);
 
-    assertThat(resources, hasItems(path, path2));
-    assertThat(resources, hasSize(2));
+    assertThat(resources, hasItems(containsString(path)));
   }
 
   @Test
   public void throwWhenDetectingClassPathResourceWithNonFileResources() throws Exception {
     String url = "http://www.google.com/all-the-secrets.jar";
-    URLClassLoader classLoader = new URLClassLoader(new URL[] {new URL(url)});
+    classLoader = new URLClassLoader(new URL[] {new URL(url)});
 
-    IllegalArgumentException exeption =
-        assertThrows(IllegalArgumentException.class, () -> detector.detect(classLoader));
-
-    assertEquals("Unable to convert url (" + url + ") to file.", exeption.getMessage());
+    assertThat(detector.detect(classLoader), not(hasItem(containsString(url))));
   }
 }
