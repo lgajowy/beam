@@ -19,9 +19,11 @@
 import CommonJobProperties as commonJobProperties
 import PostcommitJobBuilder
 
+final String JAVA_11_HOME = '/usr/lib/jvm/java-11-openjdk-amd64'
+final String JAVA_8_HOME = '/usr/lib/jvm/java-8-openjdk-amd64'
 
 PostcommitJobBuilder.postCommitJob('beam_PostCommit_Java11_ValidatesRunner_Dataflow',
-  'Run Dataflow ValidatesRunner Java 11', 'Google Cloud Dataflow Runner ValidatesRunner Tests On Java 11', this) {
+    'Run Dataflow ValidatesRunner Java 11', 'Google Cloud Dataflow Runner ValidatesRunner Tests On Java 11', this) {
 
   description('Runs the ValidatesRunner suite on the Dataflow runner with Java 11 worker harness.')
 
@@ -34,7 +36,19 @@ PostcommitJobBuilder.postCommitJob('beam_PostCommit_Java11_ValidatesRunner_Dataf
   steps {
     gradle {
       rootBuildScriptDir(commonJobProperties.checkoutDir)
-      tasks(':runners:google-cloud-dataflow-java:validatesJava11Runner')
+      commonJobProperties.setGradleSwitches(delegate)
+      tasks(':runners:google-cloud-dataflow-java:compileJava')
+      tasks(':runners:google-cloud-dataflow-java:compileTestJava')
+      switches("-Dorg.gradle.java.home=${JAVA_8_HOME}")
+    }
+
+    gradle {
+      rootBuildScriptDir(commonJobProperties.checkoutDir)
+      tasks(':runners:google-cloud-dataflow-java:validatesRunner')
+      switches("-Djava.specification.version=11")
+      switches("-Dorg.gradle.java.home=${JAVA_11_HOME}")
+      switches('-x compileJava')
+      switches('-x compileTestJava')
       // Increase parallel worker threads above processor limit since most time is
       // spent waiting on Dataflow jobs. ValidatesRunner tests on Dataflow are slow
       // because each one launches a Dataflow job with about 3 mins of overhead.
