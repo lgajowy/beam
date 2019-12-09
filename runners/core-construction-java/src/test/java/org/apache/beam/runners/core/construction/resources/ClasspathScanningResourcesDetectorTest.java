@@ -22,6 +22,7 @@ import static org.hamcrest.CoreMatchers.hasItem;
 import static org.hamcrest.CoreMatchers.hasItems;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.not;
+import static org.junit.Assert.assertFalse;
 
 import io.github.classgraph.ClassGraph;
 import java.io.File;
@@ -37,6 +38,7 @@ import org.junit.Before;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.TemporaryFolder;
+import org.mockito.Mockito;
 
 public class ClasspathScanningResourcesDetectorTest {
 
@@ -46,7 +48,7 @@ public class ClasspathScanningResourcesDetectorTest {
 
   private ClasspathScanningResourcesDetector detector;
 
-  private URLClassLoader classLoader;
+  private ClassLoader classLoader;
 
   @Before
   public void setUp() {
@@ -98,10 +100,24 @@ public class ClasspathScanningResourcesDetectorTest {
   }
 
   @Test
-  public void throwWhenDetectingClassPathResourceWithNonFileResources() throws Exception {
+  public void shouldNotDetectClassPathResourceThatIsNotAFile() throws Exception {
     String url = "http://www.google.com/all-the-secrets.jar";
     classLoader = new URLClassLoader(new URL[] {new URL(url)});
 
     assertThat(detector.detect(classLoader), not(hasItem(containsString(url))));
+  }
+
+  /*
+   * ClassGraph library that is used in the tested algorithm can still detect resources from
+   * "java.class.path" env variable. Even in case the classloader that is passed is of no use we
+   * will still be able to detect and load resource paths from the env variable.
+   */
+  @Test
+  public void shouldStillDetectResourcesEvenIfClassloaderIsUseless() {
+    ClassLoader uselessClassLoader = Mockito.mock(ClassLoader.class);
+
+    List<String> detectedResources = detector.detect(uselessClassLoader);
+
+    assertFalse(detectedResources.isEmpty());
   }
 }
