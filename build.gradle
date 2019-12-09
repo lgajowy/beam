@@ -31,7 +31,22 @@ plugins {
   id 'net.researchgate.release' version '2.6.0'
   id 'org.apache.beam.module'
   id "org.sonarqube" version "2.7"
+  id "java"
 }
+
+dependencies {
+  for(dep in library.java) {
+    owner.compile dep.value
+  }
+}
+
+
+task downloadDependencies(type: Copy) {
+  from project.configurations.runtime
+  into 'dependencies/'
+}
+
+
 
 /*************************************************************************************************/
 // Configure the root project
